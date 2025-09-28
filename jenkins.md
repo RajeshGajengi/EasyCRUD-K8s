@@ -28,7 +28,7 @@ pipeline {
             steps{
                 sh '''
                 cd frontend
-                echo "VITE_API_URL = "http://98.84.107.220:8081/api"" > .env
+                echo "VITE_API_URL = "http://98.84.155.146:8081/api"" > .env
                 npm install
                 npm run build
                 '''
@@ -242,6 +242,8 @@ pipeline {
 
 ```
 
+sudo visudo
+jenkins ALL=(ALL) NOPASSWD:ALL
 
 
 Add Jenkins user to docker group
@@ -268,11 +270,13 @@ pipeline {
         }
         stage('Build Backend image and push to Docker Hub'){
             steps{
-                sh '''
-                cd backend
-                docker build -t r25gajengi/easy_backend:v1 .
-                docker push r25gajengi/easy_backend:v1
-                '''
+               withCredentials([string(credentialsId: 'SPRING_DATASOURCE_URL', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'SPRING_DATASOURCE_USERNAME', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'SPRING_DATASOURCE_PASSWORD', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
+                   sh '''
+                    cd backend
+                    docker build -t r25gajengi/easy_backend:v1 .
+                    docker push r25gajengi/easy_backend:v1
+                    '''
+                }
             }
         }
         stage('Run Backend container'){
@@ -280,7 +284,7 @@ pipeline {
                 withCredentials([string(credentialsId: 'SPRING_DATASOURCE_URL', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'SPRING_DATASOURCE_USERNAME', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'SPRING_DATASOURCE_PASSWORD', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
                    sh '''
                 cd backend
-                docker run -d -p 8080:8081 r25gajengi/easy_backend:v1
+                docker run -d -p 8081:8081 r25gajengi/easy_backend:v1
                 '''
                 }
             }
