@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+    environment {
+        SPRING_DATASOURCE_URL = "jdbc:mariadb://mydb.cujwsmiewj2i.us-east-1.rds.amazonaws.com:3306/student_db"
+        SPRING_DATASOURCE_USERNAME = "admin"
+        SPRING_DATASOURCE_PASSWORD = "Rajesh1234"
+        BACKEND_API = "http://18.215.174.142:8080/api"
+    }
+    stages{
+        stage('clone reposirory'){
+            steps{
+                git branch: 'main', url: 'https://github.com/RajeshGajengi/EasyCRUD-K8s.git'
+            }
+        }
+        stage('backend build'){
+            steps{
+                sh '''
+                cd backend
+                mvn clean package
+                '''
+            }
+        }
+        stage('frontend build'){
+            steps{
+                sh '''
+                cd frontend
+                npm install
+                npm run build
+                '''
+            }
+        }
+        stage('frontend deploy'){
+            steps{
+                sh '''
+                cd frontend
+                cp -rf dist/* /var/www/html/
+                '''
+            }
+        }
+        stage('backend deploy'){
+            steps{
+                sh '''
+                cd backend
+                java -jar target/student-registration-backend-0.0.1-SNAPSHOT.jar
+                '''
+            }
+        }
+    }
+}
