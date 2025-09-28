@@ -241,3 +241,69 @@ pipeline {
 }
 
 ```
+
+
+
+Add Jenkins user to docker group
+ - sudo usermod -aG docker jenkins
+ - then restart the jenkins server
+
+```groovy
+
+
+pipeline {
+    agent any
+    stages{
+        stage('clone reposirory'){
+            steps{
+                git branch: 'main', url: 'https://github.com/RajeshGajengi/EasyCRUD-K8s.git'
+            }
+        }
+        stage('Docker login'){
+            steps{
+                withCredentials([usernamePassword(credentialsId: 'docker-cred', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh 'docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}'
+                }  
+            }
+        }
+        stage('Build Backend image and push to Docker Hub'){
+            steps{
+                sh '''
+                cd backend
+                docker build -t r25gajengi/easy_backend:v1 .
+                docker push r25gajengi/easy_backend:v1
+                '''
+            }
+        }
+        stage('Run Backend container'){
+            steps{
+                withCredentials([string(credentialsId: 'SPRING_DATASOURCE_URL', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'SPRING_DATASOURCE_USERNAME', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'SPRING_DATASOURCE_PASSWORD', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
+                   sh '''
+                cd backend
+                docker run -d -p 8080:8081 r25gajengi/easy_backend:v1
+                '''
+                }
+            }
+        }
+        stage('Build Frontend image adn Push to Docker Hub'){
+            steps{
+                sh '''
+                docker build -t r25gajengi/easy_frontend:v1
+                docker push r25gajengi/easy_frontend:v1
+                '''
+            }
+        }
+        stage('Run frontend container'){
+            steps{
+                withCredentials([string(credentialsId: 'VITE_API_URL', variable: 'VITE_API_URL')]) {
+                    sh '''
+                cd frontend
+                docker run -d -p 80:80 r25gajengi/easy_frontend:v1
+                '''
+                }
+            }
+        }
+    }
+}
+
+```
