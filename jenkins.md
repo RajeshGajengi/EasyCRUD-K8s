@@ -109,6 +109,64 @@ pipeline {
 
 ```
 
+## Option 3 : With Jenkins credentials adding environments variables.
+
+```groovy
+
+pipeline {
+    agent any
+    stages{
+        stage('clone reposirory'){
+            steps{
+                git branch: 'main', url: 'https://github.com/RajeshGajengi/EasyCRUD-K8s.git'
+            }
+        }
+        stage('backend build'){
+            steps{
+                withCredentials([string(credentialsId: 'Database_url', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'Database_username', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'DB_User_password', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
+                    sh '''
+                cd backend
+                mvn clean package
+                '''
+                }
+            }
+        }
+        stage('frontend build'){
+            steps{
+                withCredentials([string(credentialsId: 'Backend_api', variable: 'VITE_API_URL')]) {
+                     sh '''
+                cd frontend
+                npm install
+                npm run build
+                '''
+                }
+            }
+        }
+        stage('frontend deploy'){
+            steps{
+                withCredentials([string(credentialsId: 'Backend_api', variable: 'VITE_API_URL')]) {
+                   sh '''
+                cd frontend
+                sudo cp -rf dist/* /var/www/html/
+                '''
+                }
+            }
+        }
+        stage('backend deploy'){
+            steps{
+               withCredentials([string(credentialsId: 'Database_url', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'Database_username', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'DB_User_password', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
+                    sh '''
+                cd backend
+                java -jar target/student-registration-backend-0.0.1-SNAPSHOT.jar
+                '''
+               }
+            }
+        }
+    }
+}
+
+```
+
 installation script :
 
 
@@ -131,6 +189,7 @@ sudo apt install jenkins -y
 # 3 tier application deployment using docker with jenkins
 
 ```groovy
+
 pipeline {
     agent any
     environment {
