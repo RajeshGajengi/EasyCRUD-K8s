@@ -1,7 +1,6 @@
 FROM node:24-alpine
 COPY . /opt/
 WORKDIR /opt
-ARG VITE_API_URL=${VITE_API_URL}
 RUN npm install && npm run build
 RUN apk update && apk add apache2
 RUN rm -rf /var/www/localhost/htdocs/*
