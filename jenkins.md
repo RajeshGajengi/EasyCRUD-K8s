@@ -28,7 +28,7 @@ pipeline {
             steps{
                 sh '''
                 cd frontend
-                echo "VITE_API_URL = "http://98.84.155.146:8081/api"" > .env
+                echo "VITE_API_URL = "http://54.235.2.116:8081/api"" > .env
                 npm install
                 npm run build
                 '''
@@ -183,6 +183,8 @@ echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
   /etc/apt/sources.list.d/jenkins.list > /dev/null
 sudo apt update
 sudo apt install jenkins -y
+sudo apt install docker.io -y
+
 
 
 
@@ -196,7 +198,7 @@ pipeline {
         SPRING_DATASOURCE_URL = "jdbc:mariadb://mydb.cujwsmiewj2i.us-east-1.rds.amazonaws.com:3306/student_db"
         SPRING_DATASOURCE_USERNAME = "admin"
         SPRING_DATASOURCE_PASSWORD = "Rajesh1234"
-        VITE_API_URL = "http://98.84.107.220:8081/api"
+        VITE_API_URL = "http://54.235.2.116:8081/api"
     }
     stages{
         stage('clone reposirory'){
@@ -252,7 +254,6 @@ Add Jenkins user to docker group
 
 ```groovy
 
-
 pipeline {
     agent any
     stages{
@@ -270,8 +271,8 @@ pipeline {
         }
         stage('Build Backend image and push to Docker Hub'){
             steps{
-               withCredentials([string(credentialsId: 'SPRING_DATASOURCE_URL', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'SPRING_DATASOURCE_USERNAME', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'SPRING_DATASOURCE_PASSWORD', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
-                   sh '''
+               withCredentials([string(credentialsId: 'database_url', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'database_user', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'database_password', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
+                    sh '''
                     cd backend
                     docker build -t r25gajengi/easy_backend:v1 .
                     docker push r25gajengi/easy_backend:v1
@@ -281,28 +282,41 @@ pipeline {
         }
         stage('Run Backend container'){
             steps{
-                withCredentials([string(credentialsId: 'SPRING_DATASOURCE_URL', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'SPRING_DATASOURCE_USERNAME', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'SPRING_DATASOURCE_PASSWORD', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
-                   sh '''
+               withCredentials([string(credentialsId: 'database_url', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'database_user', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'database_password', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
+                sh '''
                 cd backend
-                docker run -d -p 8081:8081 r25gajengi/easy_backend:v1
+                docker rm -f backend || true
+                docker run --name backend -d \
+                  -p 8081:8081 \
+                  -e SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL} \
+                  -e SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME} \
+                  -e SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD} \
+                  r25gajengi/easy_backend:v1
                 '''
                 }
             }
         }
         stage('Build Frontend image adn Push to Docker Hub'){
             steps{
-                sh '''
-                docker build -t r25gajengi/easy_frontend:v1
-                docker push r25gajengi/easy_frontend:v1
-                '''
+                withCredentials([string(credentialsId: 'backend_api', variable: 'VITE_API_URL')]) {
+                    sh '''
+                    cd frontend
+                    docker build -t r25gajengi/easy_frontend:v1 .
+                    docker push r25gajengi/easy_frontend:v1
+                    '''
+                }
             }
         }
         stage('Run frontend container'){
             steps{
-                withCredentials([string(credentialsId: 'VITE_API_URL', variable: 'VITE_API_URL')]) {
+                withCredentials([string(credentialsId: 'backend_api', variable: 'VITE_API_URL')]) {
                     sh '''
                 cd frontend
-                docker run -d -p 80:80 r25gajengi/easy_frontend:v1
+                docker rm -f frontend || true
+                docker run --name frontend -d \
+                  -p 80:80 \
+                  -e VITE_API_URL=${VITE_API_URL} \
+                  r25gajengi/easy_frontend:v1
                 '''
                 }
             }
