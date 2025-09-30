@@ -190,60 +190,6 @@ sudo apt install docker.io -y
 
 # 3 tier application deployment using docker with jenkins
 
-```groovy
-
-pipeline {
-    agent any
-    environment {
-        SPRING_DATASOURCE_URL = "jdbc:mariadb://mydb.cujwsmiewj2i.us-east-1.rds.amazonaws.com:3306/student_db"
-        SPRING_DATASOURCE_USERNAME = "admin"
-        SPRING_DATASOURCE_PASSWORD = "Rajesh1234"
-        VITE_API_URL = "http://54.235.2.116:8081/api"
-    }
-    stages{
-        stage('clone reposirory'){
-            steps{
-                git branch: 'main', url: 'https://github.com/RajeshGajengi/EasyCRUD-K8s.git'
-            }
-        }
-        stage('Build Backend image and push to Docker Hub'){
-            steps{
-                sh '''
-                cd backend
-                docker build -t r25gajengi/easy_backend:v1 .
-                docker push r25gajengi/easy_backend:v1
-                '''
-            }
-        }
-        stage('Run Backend container'){
-            steps{
-                sh '''
-                cd backend
-                docker run -d -p 8080:8081 r25gajengi/easy_backend:v1
-                '''
-            }
-        }
-        stage('Build Frontend image adn Push to Docker Hub'){
-            steps{
-                sh '''
-                docker build -t r25gajengi/easy_frontend:v1
-                docker push r25gajengi/easy_frontend:v1
-                '''
-            }
-        }
-        stage('Run frontend container'){
-            steps{
-                sh '''
-                cd frontend
-                docker run -d -p 80:80 easy_frontend:v1
-                '''
-            }
-        }
-    }
-}
-
-```
-
 sudo visudo
 jenkins ALL=(ALL) NOPASSWD:ALL
 
@@ -253,7 +199,6 @@ Add Jenkins user to docker group
  - then restart the jenkins server
 
 ```groovy
-
 pipeline {
     agent any
     stages{
@@ -271,13 +216,11 @@ pipeline {
         }
         stage('Build Backend image and push to Docker Hub'){
             steps{
-               withCredentials([string(credentialsId: 'database_url', variable: 'SPRING_DATASOURCE_URL'), string(credentialsId: 'database_user', variable: 'SPRING_DATASOURCE_USERNAME'), string(credentialsId: 'database_password', variable: 'SPRING_DATASOURCE_PASSWORD')]) {
-                    sh '''
+               sh '''
                     cd backend
                     docker build -t r25gajengi/easy_backend:v1 .
                     docker push r25gajengi/easy_backend:v1
                     '''
-                }
             }
         }
         stage('Run Backend container'){
@@ -301,6 +244,7 @@ pipeline {
                 withCredentials([string(credentialsId: 'backend_api', variable: 'VITE_API_URL')]) {
                     sh '''
                     cd frontend
+                    echo "VITE_API_URL = ${VITE_API_URL}" > .env
                     docker build -t r25gajengi/easy_frontend:v1 .
                     docker push r25gajengi/easy_frontend:v1
                     '''
@@ -309,19 +253,22 @@ pipeline {
         }
         stage('Run frontend container'){
             steps{
-                withCredentials([string(credentialsId: 'backend_api', variable: 'VITE_API_URL')]) {
-                    sh '''
+                sh '''
                 cd frontend
                 docker rm -f frontend || true
                 docker run --name frontend -d \
                   -p 80:80 \
-                  -e VITE_API_URL=${VITE_API_URL} \
                   r25gajengi/easy_frontend:v1
                 '''
-                }
             }
         }
     }
 }
 
+
 ```
+
+
+# 3 tier application deployment using k8s with jenkins
+
+ 
