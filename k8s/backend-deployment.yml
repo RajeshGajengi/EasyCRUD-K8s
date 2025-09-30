@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: r25gajengi/student-backend:v1
+          image: r25gajengi/easy_backend:v2
           ports:
             - containerPort: 8080
           env:
