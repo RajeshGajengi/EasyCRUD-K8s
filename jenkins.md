@@ -271,4 +271,76 @@ pipeline {
 
 # 3 tier application deployment using k8s with jenkins
 
+ ```groovy
+
+ pipeline {
+    agent any
+    stages{
+        stage('clone reposirory'){
+            steps{
+                git branch: 'main', url: 'https://github.com/RajeshGajengi/EasyCRUD-K8s.git'
+            }
+        }
+        stage('Docker login'){
+            steps{
+                withCredentials([usernamePassword(credentialsId: 'docker-cred', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh 'docker login -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}'
+                }  
+            }
+        }
+        stage('Build Backend image and push to Docker Hub'){
+            steps{
+               sh '''
+                    cd backend
+                    docker build -t r25gajengi/easy_backend:v2 .
+                    docker push r25gajengi/easy_backend:v2
+                    '''
+            }
+        }
+        
+        stage('Build Frontend image adn Push to Docker Hub'){
+            steps{
+                sh '''
+                    cd frontend
+                    docker build -t r25gajengi/easy_frontend:v2 .
+                    docker push r25gajengi/easy_frontend:v2
+                    '''
+            }
+        }
+        stage ('kubernetes configure'){
+            steps{
+                sh 'aws eks update-kubeconfig --region ap-south-1 --name mycluster'
+            }
+        }
+        stage ('ingress controller download'){
+            steps{
+                sh 'kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml'
+            }
+        }
+        stage ('Kubernetes deployment'){
+            steps{
+                sh '''
+                kubectl apply -f k8s/secret.yaml
+                kubectl apply -f k8s/backend-deployment.yaml
+                kubectl apply -f k8s/backend-service.yaml
+                kubectl apply -f k8s/frontend-deployment.yaml
+                kubectl apply -f k8s/frontend-service.yaml
+                kubectl apply -f k8s/ingress.yaml
+                '''
+            }
+        }
+        stage('verify'){
+            steps{
+                sh '''
+                kubectl get pods
+                kubectl get svc
+                kubectl get ingress
+                '''
+            }
+        }
+    }
+}
+
  
+
+ ```
