@@ -271,9 +271,9 @@ pipeline {
 
 # 3 tier application deployment using k8s with jenkins
 
- ```groovy
+```groovy
 
- pipeline {
+pipeline {
     agent any
     stages{
         stage('clone reposirory'){
@@ -309,33 +309,42 @@ pipeline {
         }
         stage ('kubernetes configure'){
             steps{
+                withAWS(credentials: 'aws-cred', region: 'us-east-1') {
                 sh 'aws eks update-kubeconfig --region ap-south-1 --name mycluster'
+            
+                }
             }
         }
         stage ('ingress controller download'){
             steps{
+                withAWS(credentials: 'aws-cred', region: 'us-east-1') {
                 sh 'kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml'
+                }
             }
         }
         stage ('Kubernetes deployment'){
             steps{
+                withAWS(credentials: 'aws-cred', region: 'us-east-1') {
                 sh '''
-                kubectl apply -f k8s/secret.yaml
-                kubectl apply -f k8s/backend-deployment.yaml
-                kubectl apply -f k8s/backend-service.yaml
-                kubectl apply -f k8s/frontend-deployment.yaml
-                kubectl apply -f k8s/frontend-service.yaml
-                kubectl apply -f k8s/ingress.yaml
+                kubectl apply -f k8s/secrets.yml
+                kubectl apply -f k8s/backend-deployment.yml
+                kubectl apply -f k8s/backend-service.yml
+                kubectl apply -f k8s/frontend-deployment.yml
+                kubectl apply -f k8s/frontend-service.yml
+                kubectl apply -f k8s/ingress.yml
                 '''
+                }
             }
         }
         stage('verify'){
             steps{
+                withAWS(credentials: 'aws-cred', region: 'us-east-1') {
                 sh '''
                 kubectl get pods
                 kubectl get svc
                 kubectl get ingress
                 '''
+                }
             }
         }
     }
@@ -343,4 +352,73 @@ pipeline {
 
  
 
- ```
+```
+
+
+
+
+
+# install below tools:
+#!/bin/bash
+sudo apt update && apt install openjdk-17-jdk -y
+sudo apt install maven -y
+sudo apt install nodejs npm -y
+sudo apt install mariadb-client -y
+sudo apt install apache2 -y
+sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian/jenkins.io-2023.key
+echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt update
+sudo apt install jenkins -y
+sudo apt install docker.io -y
+
+
+
+sudo visudo
+jenkins ALL=(ALL) NOPASSWD:ALL
+
+
+Add Jenkins user to docker group
+ - sudo usermod -aG docker jenkins
+ - then restart the jenkins server
+
+
+
+ In Jenkins add credetials:
+ Docker credetials: username and password
+ AWS credetials: 
+
+FOR docker deployment :
+Add credetials for database url , username and password.
+
+
+
+
+# CI/CD Pipeline for 3-Tier App Deployment with Docker and Jenkins
+
+This document explains how to deploy a 3-tier application architecture using Docker and Jenkins, with the backend developed using Java (Maven), the frontend built using Node.js (NPM), and the database managed via AWS RDS (MariaDB). The CI/CD pipeline automates the process of building, testing, and deploying both the backend and frontend services to Docker containers, and pushing them to Docker Hub.
+
+
+## Overview
+
+This project consists of:
+
+- `Backend`: A REST API built using Java and Spring Boot (Maven).
+- `Frontend`: A React-based web application built using Node.js and npm.
+- `Database`: A MariaDB instance hosted on AWS RDS.
+
+The CI/CD pipeline automates the process of building, testing, and deploying both backend and frontend applications in Docker containers.
+
+## Prerequisites
+
+Ensure you have the following tools installed before starting the setup:
+- `Jenkins`: For continuous integration and continuous deployment (CI/CD).
+- `Docker`: For containerizing the backend and frontend applications.
+- `Terraform`: For provisioning and managing infrastructure (optional but recommended for cloud deployments).
+- `AWS CLI`: For interacting with AWS services.
+- `Kubernetes`: (Optional) If you want to orchestrate the containers using Kubernetes.
+- `MariaDB Client`: To connect to the MariaDB database hosted on AWS RDS.
+- `Java (JDK)`: For building the backend service using Maven.
+- `Node.js`: For building the frontend service with NPM.
